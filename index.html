@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>番茄钟</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, "Helvetica Neue", sans-serif;
+    background: #F7F2EC;
+    color: #6F655E;
+    width: 400px;
+    height: 560px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+    -webkit-app-region: drag;
+  }
+
+  /* allow clicks on interactive elements */
+  button, #skip-btn { -webkit-app-region: no-drag; }
+
+  #mode-label {
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 44px;
+    letter-spacing: 0.02em;
+  }
+
+  /* SVG ring */
+  #ring-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin-top: 20px;
+  }
+
+  #ring-wrap svg {
+    transform: rotate(-90deg);
+  }
+
+  #time-display {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 56px;
+    font-weight: 700;
+    letter-spacing: -2px;
+    pointer-events: none;
+  }
+
+  /* dots */
+  #dots {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    font-size: 22px;
+  }
+
+  /* buttons */
+  #btn-row {
+    display: flex;
+    gap: 14px;
+    margin-top: 22px;
+  }
+
+  button {
+    width: 118px;
+    height: 48px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #6F655E;
+    cursor: pointer;
+    background: #EAE3DB;
+    transition: opacity 0.15s;
+    font-family: inherit;
+  }
+
+  button:hover  { opacity: 0.8; }
+  button:active { opacity: 0.6; }
+
+  #skip-btn {
+    background: none;
+    border: none;
+    color: #D9D2CC;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 14px;
+    font-family: inherit;
+  }
+
+  #skip-btn:hover { color: #6F655E; }
+
+  #count-label {
+    font-size: 12px;
+    color: #D9D2CC;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div id="mode-label">专注工作 🍅</div>
+
+<div id="ring-wrap">
+  <svg width="260" height="260" viewBox="0 0 260 260">
+    <!-- track -->
+    <circle id="ring-track" cx="130" cy="130" r="110"
+      fill="none" stroke="#EAE3DB" stroke-width="14"/>
+    <!-- progress -->
+    <circle id="ring-progress" cx="130" cy="130" r="110"
+      fill="none" stroke="#C65A4A" stroke-width="14"
+      stroke-linecap="round"
+      stroke-dasharray="691.15"
+      stroke-dashoffset="0"/>
+  </svg>
+  <div id="time-display">25:00</div>
+</div>
+
+<div id="dots">
+  <span>○</span><span>○</span><span>○</span><span>○</span>
+</div>
+
+<div id="btn-row">
+  <button id="start-btn" onclick="toggle()">开始</button>
+  <button id="reset-btn" onclick="reset()">重置</button>
+</div>
+<button id="skip-btn" onclick="skip()">跳过 →</button>
+<div id="count-label">今日完成：0 个番茄（0 分钟）</div>
+
+<script src="render.js"></script>
+</body>
+</html>
