@@ -9,7 +9,8 @@ function createWindow() {
     backgroundColor: '#F7F2EC',
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      backgroundThrottling: false  // 防止窗口失焦时 Chromium 节流 setInterval
     }
   })
 

@@ -33,6 +33,7 @@ let mode      = 'work'
 let timeLeft  = DURATIONS.work
 let pomodoros = 0
 let ticker    = null  // null = 已停止；非 null = 运行中的 setInterval ID
+let tickOrigin = null // { at: Date.now(), left: timeLeft }，每次启动/恢复时记录，用挂钟计算真实剩余时间
 
 // ─── DOM 元素引用 ────────────────────────────────────────────────────────────
 
@@ -61,17 +62,26 @@ function stop() {
  * 开始 / 暂停切换
  */
 function toggle() {
-  if (ticker) { stop() }
-  else { ticker = setInterval(tick, 1000) }
+  if (ticker) {
+    stop()
+  } else {
+    // 记录本次启动时的挂钟时间和剩余秒数，tick() 据此计算真实流逝时间
+    tickOrigin = { at: Date.now(), left: timeLeft }
+    ticker = setInterval(tick, 1000)
+  }
   render()
 }
 
 /**
- * 每秒回调：只更新随时间变化的两个 DOM 节点，避免每秒刷新不变的按钮/圆点/计数
+ * 每秒回调：用 Date.now() 与 tickOrigin 的差值计算剩余时间。
+ * 即使 setInterval 被系统延迟触发（如窗口切走后节流），
+ * 显示的时间依然基于真实流逝秒数，不会因 tick 丢失而滞后。
  */
 function tick() {
+  const elapsed = Math.floor((Date.now() - tickOrigin.at) / 1000)
+  timeLeft = Math.max(0, tickOrigin.left - elapsed)
+
   if (timeLeft > 0) {
-    timeLeft--
     timeDisplay.textContent = fmt(timeLeft)
     ringProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - timeLeft / DURATIONS[mode])
   } else {
