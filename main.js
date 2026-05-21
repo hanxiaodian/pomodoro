@@ -6,7 +6,7 @@ function createWindow() {
     height: 560,
     resizable: false,
     titleBarStyle: 'hiddenInset',
-    backgroundColor: '#F7F2EC',
+    backgroundColor: '#EDE3CD',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,

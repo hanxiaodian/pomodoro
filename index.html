@@ -4,41 +4,118 @@
 <meta charset="UTF-8">
 <title>番茄钟</title>
 <style>
+  /* ─── 色彩 / 排版 变量 ──────────────────────────────────────────── */
+  :root {
+    --paper:        #EDE3CD;   /* 宣纸米黄 */
+    --paper-deep:   #D8CCB0;   /* 纸纹深处 */
+    --ink:          #1C1816;   /* 墨黑 */
+    --ink-soft:     #5C544C;   /* 淡墨 */
+    --ink-faint:    #A89E8E;   /* 远墨 */
+    --vermilion:    #A93226;   /* 朱砂（专注 / 印章） */
+    --bamboo:       #6B8E7F;   /* 竹青（小憩） */
+    --dai-blue:     #2C5F7C;   /* 黛蓝（久憩） */
+    --accent:       var(--vermilion);  /* 由 JS 同步当前模式色 */
+
+    --font-kai:  'STKaiti', 'Kaiti SC', '楷体', serif;
+    --font-song: 'STSong', 'Songti SC', '宋体', serif;
+    --font-hei:  'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html, body { width: 400px; height: 560px; }
+
   body {
-    font-family: -apple-system, "Helvetica Neue", sans-serif;
-    background: #F7F2EC;
-    color: #6F655E;
-    width: 400px;
-    height: 560px;
+    position: relative;
+    font-family: var(--font-hei);
+    background: var(--paper);
+    color: var(--ink);
     display: flex;
     flex-direction: column;
     align-items: center;
     user-select: none;
     -webkit-app-region: drag;
+    overflow: hidden;
   }
 
-  /* allow clicks on interactive elements */
-  button, #skip-btn { -webkit-app-region: no-drag; }
+  /* 宣纸纸纹：SVG fractalNoise，乘色叠加，0 网络开销 */
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42  0 0 0 0 0.32  0 0 0 0 0.18  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    mix-blend-mode: multiply;
+    opacity: 0.55;
+  }
 
+  /* 顶部 / 底部朱砂细分隔线 */
+  body::after {
+    content: '';
+    position: absolute;
+    left: 32px; right: 32px;
+    top: 34px;
+    height: 1px;
+    background: var(--vermilion);
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  /* 让交互元素可点击 */
+  button, #skip-btn, #seal { -webkit-app-region: no-drag; }
+
+  /* ─── 模式印章 ──────────────────────────────────────────────────── */
   #mode-label {
-    font-size: 20px;
-    font-weight: 700;
-    margin-top: 44px;
-    letter-spacing: 0.02em;
+    position: relative;
+    margin-top: 50px;
+    padding: 9px 26px 11px;
+    font-family: var(--font-kai);
+    font-size: 22px;
+    font-weight: 400;
+    letter-spacing: 0.4em;
+    text-indent: 0.4em;   /* 抵消 letter-spacing 造成的视觉右偏 */
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    background: transparent;
+    transition: color 0.4s, border-color 0.4s;
+    z-index: 1;
   }
 
-  /* SVG ring */
+  /* 印章四角小方块 */
+  #mode-label::before,
+  #mode-label::after {
+    content: '';
+    position: absolute;
+    width: 5px; height: 5px;
+    background: var(--paper);
+    border: 1.5px solid var(--accent);
+    transition: border-color 0.4s;
+  }
+  #mode-label::before { top: -4px; left: -4px; }
+  #mode-label::after  { bottom: -4px; right: -4px; }
+
+  /* ─── 进度环 ────────────────────────────────────────────────────── */
   #ring-wrap {
     position: relative;
     width: 260px;
     height: 260px;
-    margin-top: 20px;
+    margin-top: 18px;
   }
 
   #ring-wrap svg {
     transform: rotate(-90deg);
+    overflow: visible;  /* 让 stroke 不被裁切 */
+  }
+
+  /* 进度环外的一圈极细墨色"砚台"环，增加层次 */
+  #ring-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 16px;
+    border: 0.5px solid var(--ink-faint);
+    border-radius: 50%;
+    opacity: 0.4;
+    pointer-events: none;
   }
 
   #time-display {
@@ -47,92 +124,164 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 56px;
-    font-weight: 700;
-    letter-spacing: -2px;
+    font-family: var(--font-song);
+    font-size: 64px;
+    font-weight: 400;
+    letter-spacing: -0.04em;
+    color: var(--ink);
     pointer-events: none;
+    font-variant-numeric: tabular-nums;  /* 等宽数字避免抖动 */
   }
 
-  /* dots */
+  /* ─── 番茄计数（朱砂印记） ─────────────────────────────────────── */
   #dots {
     display: flex;
-    gap: 10px;
+    gap: 14px;
     margin-top: 18px;
-    font-size: 22px;
+    font-size: 14px;
+  }
+  #dots span {
+    width: 10px; height: 10px;
+    border-radius: 1px;     /* 接近方形，仿朱砂印记 */
+    background: transparent;
+    border: 1px solid var(--ink-faint);
+    transition: background 0.3s, border-color 0.3s;
   }
 
-  /* buttons */
+  /* ─── 按钮 ──────────────────────────────────────────────────────── */
   #btn-row {
     display: flex;
-    gap: 14px;
-    margin-top: 22px;
+    gap: 18px;
+    margin-top: 20px;
   }
 
   button {
-    width: 118px;
-    height: 48px;
-    border: none;
-    border-radius: 12px;
+    width: 104px;
+    height: 42px;
+    border: 1px solid var(--ink-soft);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-kai);
     font-size: 16px;
-    font-weight: 700;
-    color: #6F655E;
+    letter-spacing: 0.4em;
+    text-indent: 0.4em;
     cursor: pointer;
-    background: #EAE3DB;
-    transition: opacity 0.15s;
-    font-family: inherit;
+    transition: all 0.2s ease;
+    position: relative;
   }
 
-  button:hover  { opacity: 0.8; }
-  button:active { opacity: 0.6; }
+  button:hover {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
 
+  button:active { transform: translateY(1px); }
+
+  /* 主按钮（开始/暂停）用朱砂色边框 */
+  #start-btn {
+    border-color: var(--accent);
+    color: var(--accent);
+    transition: all 0.2s ease, border-color 0.4s, color 0.4s;
+  }
+  #start-btn:hover {
+    background: var(--accent);
+    color: var(--paper);
+  }
+
+  /* ─── 跳过 / 计数 ──────────────────────────────────────────────── */
   #skip-btn {
     background: none;
     border: none;
-    color: #D9D2CC;
-    font-size: 13px;
+    color: var(--ink-faint);
+    font-family: var(--font-hei);
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    margin-top: 16px;
     cursor: pointer;
-    margin-top: 14px;
-    font-family: inherit;
+    transition: color 0.2s;
   }
-
-  #skip-btn:hover { color: #6F655E; }
+  #skip-btn:hover { color: var(--ink); }
 
   #count-label {
+    font-family: var(--font-song);
     font-size: 12px;
-    color: #D9D2CC;
+    color: var(--ink-soft);
+    letter-spacing: 0.15em;
     margin-top: 10px;
   }
+
+  /* ─── 右下角篆体印章 ───────────────────────────────────────────── */
+  #seal {
+    position: absolute;
+    right: 22px;
+    bottom: 20px;
+    width: 34px;
+    height: 34px;
+    background: var(--vermilion);
+    color: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-kai);
+    font-size: 20px;
+    font-weight: 700;
+    transform: rotate(-4deg);
+    box-shadow:
+      inset 0 0 0 1.5px var(--paper),
+      inset 0 0 0 2.5px var(--vermilion);
+    /* 用 SVG turbulence 让印章边缘像石头印拓那样有噪点 */
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='34'><filter id='r'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2'/><feDisplacementMap in='SourceGraphic' scale='1.2'/></filter><rect width='34' height='34' fill='white' filter='url(%23r)'/></svg>");
+    -webkit-mask-size: 100% 100%;
+    transition: transform 0.3s;
+  }
+  #seal:hover { transform: rotate(0deg) scale(1.05); }
+
+  /* ─── 启动入场动效 ──────────────────────────────────────────────── */
+  @keyframes inkBloom {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #mode-label { animation: inkBloom 0.6s ease 0.05s both; }
+  #ring-wrap  { animation: inkBloom 0.7s ease 0.18s both; }
+  #dots       { animation: inkBloom 0.7s ease 0.32s both; }
+  #btn-row    { animation: inkBloom 0.7s ease 0.42s both; }
+  #skip-btn,
+  #count-label { animation: inkBloom 0.7s ease 0.52s both; }
+  #seal       { animation: inkBloom 1.2s ease 0.8s both; }
 </style>
 </head>
 <body>
 
-<div id="mode-label">专注工作 🍅</div>
+<div id="mode-label">專注</div>
 
 <div id="ring-wrap">
   <svg width="260" height="260" viewBox="0 0 260 260">
-    <!-- track -->
     <circle id="ring-track" cx="130" cy="130" r="110"
-      fill="none" stroke="#EAE3DB" stroke-width="14"/>
-    <!-- progress -->
+      fill="none" stroke="#1C1816" stroke-opacity="0.08" stroke-width="1.5"/>
     <circle id="ring-progress" cx="130" cy="130" r="110"
-      fill="none" stroke="#C65A4A" stroke-width="14"
-      stroke-linecap="round"
+      fill="none" stroke="#A93226" stroke-width="8"
+      stroke-linecap="butt"
       stroke-dasharray="691.15"
-      stroke-dashoffset="0"/>
+      stroke-dashoffset="0"
+      style="transition: stroke 0.4s;"/>
   </svg>
   <div id="time-display">25:00</div>
 </div>
 
 <div id="dots">
-  <span>○</span><span>○</span><span>○</span><span>○</span>
+  <span></span><span></span><span></span><span></span>
 </div>
 
 <div id="btn-row">
   <button id="start-btn" onclick="toggle()">开始</button>
   <button id="reset-btn" onclick="reset()">重置</button>
 </div>
-<button id="skip-btn" onclick="skip()">跳过 →</button>
-<div id="count-label">今日完成：0 个番茄（0 分钟）</div>
+<button id="skip-btn" onclick="skip()">— 跳过 —</button>
+<div id="count-label">今日　0　颗番茄　·　0　分钟</div>
+
+<div id="seal" title="番茄钟">番</div>
 
 <script src="render.js"></script>
 </body>

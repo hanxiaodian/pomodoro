@@ -6,15 +6,15 @@ const { ipcRenderer } = require('electron')
 // 必须与 index.html 中 SVG circle 的 r 属性保持一致
 const RING_RADIUS = 110
 
-// 每种模式对应的强调色（进度环、模式标签）和顶部标签文字
-// 背景统一为暖白 #F7F2EC，通过环色区分模式：
-//   专注 → 主色砖红 #C65A4A
-//   短休 → 弱化暖灰 #D9D2CC
-//   长休 → 文本深棕 #6F655E
+// 每种模式对应的强调色和顶部印章文字
+// 背景统一为宣纸米黄 #EDE3CD，通过 --accent CSS 变量切换模式色：
+//   專注 → 朱砂红 #A93226
+//   小憩 → 竹青  #6B8E7F
+//   久憩 → 黛蓝  #2C5F7C
 const THEMES = {
-  work:        { accent: '#C65A4A', label: '专注工作 🍅' },
-  short_break: { accent: '#D9D2CC', label: '短暂休息 🌿' },
-  long_break:  { accent: '#6F655E', label: '长时休息 ☕' }
+  work:        { accent: '#A93226', label: '專注' },
+  short_break: { accent: '#6B8E7F', label: '小憩' },
+  long_break:  { accent: '#2C5F7C', label: '久憩' }
 }
 
 // 每种模式的倒计时总秒数
@@ -100,27 +100,33 @@ function tick() {
 function render() {
   const { accent, label } = THEMES[mode]
 
-  // 主题：进度环颜色、模式标签颜色与文字
-  ringProgress.style.stroke = accent
-  modeLabel.style.color     = accent
-  modeLabel.textContent     = label
+  // 通过 CSS 变量统一驱动所有强调色元素（印章边框、按钮、进度环）
+  document.documentElement.style.setProperty('--accent', accent)
+
+  modeLabel.textContent = label
 
   // 时间与进度环
   timeDisplay.textContent = fmt(timeLeft)
+  ringProgress.style.stroke = accent
   ringProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - timeLeft / DURATIONS[mode])
 
   // 按钮文字（ticker 不为 null 则正在运行）
   startBtn.textContent = ticker ? '暂停' : '开始'
 
-  // 圆点：已完成的用强调色实心，未完成的用弱化灰空心
+  // 圆点：已完成的填朱砂实心方印，未完成的为远墨空框
   const idx = pomodoros % 4
   dots.forEach((d, i) => {
-    d.textContent = i < idx ? '●' : '○'
-    d.style.color = i < idx ? accent : '#D9D2CC'
+    if (i < idx) {
+      d.style.background   = accent
+      d.style.borderColor  = accent
+    } else {
+      d.style.background   = 'transparent'
+      d.style.borderColor  = '#A89E8E'
+    }
   })
 
-  // 分钟数从 DURATIONS 推导，与专注时长配置保持一致
-  countLabel.textContent = `今日完成：${pomodoros} 个番茄（${pomodoros * (DURATIONS.work / 60)} 分钟）`
+  // 中式排版：全角间距 + 间隔点
+  countLabel.textContent = `今日　${pomodoros}　颗番茄　·　${pomodoros * (DURATIONS.work / 60)}　分钟`
 }
 
 // ─── 会话流转 ────────────────────────────────────────────────────────────────
@@ -134,16 +140,16 @@ function sessionDone() {
     if (pomodoros % 4 === 0) {
       mode     = 'long_break'
       timeLeft = DURATIONS.long_break
-      notify('专注结束！', `完成 4 个番茄，长时休息开始 ☕`)
+      notify('一炷香尽', '已成四颗番茄，且久憩片刻')
     } else {
       mode     = 'short_break'
       timeLeft = DURATIONS.short_break
-      notify('专注结束！', '休息 5 分钟 🌿')
+      notify('一炷香尽', '小憩五分钟，再行启程')
     }
   } else {
     mode     = 'work'
     timeLeft = DURATIONS.work
-    notify('休息结束！', '开始新一轮专注 🍅')
+    notify('憩毕', '复入专注，凝神再战')
   }
   render()
 }
